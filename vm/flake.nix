@@ -24,13 +24,20 @@
           systemd.services.load-docker-images = {
             description = "Load Docker images for Container Escape Lab";
             wantedBy = [ "multi-user.target" ];
-            after = [ "docker.service" ];
+            after = [ "docker.service" "docker.socket" ];
             requires = [ "docker.service" ];
             serviceConfig = {
               Type = "oneshot";
               RemainAfterExit = true;
+              ExecStartPre = "${nixpkgs.legacyPackages.${system}.coreutils}/bin/sleep 2";
             };
             script = ''
+              echo "Waiting for Docker to be ready..."
+              until ${nixpkgs.legacyPackages.${system}.docker}/bin/docker info >/dev/null 2>&1; do
+                echo "Docker not ready yet, waiting..."
+                sleep 1
+              done
+              
               echo "Loading web-vuln Docker image..."
               ${nixpkgs.legacyPackages.${system}.docker}/bin/docker load < ${web-vuln.packages.${system}.web-vuln}
               echo "Docker images loaded successfully!"
@@ -74,8 +81,14 @@
             "docker-web-vuln-g${toString groupNum}" = {
               description = "Web-Vuln Container - Group ${toString groupNum}";
               wantedBy = [ "multi-user.target" ];
-              after = [ "docker-network-g${toString groupNum}.service" ];
-              requires = [ "docker-network-g${toString groupNum}.service" ];
+              after = [ 
+                "docker-network-g${toString groupNum}.service"
+                "load-docker-images.service"
+              ];
+              requires = [ 
+                "docker-network-g${toString groupNum}.service"
+                "load-docker-images.service"
+              ];
               serviceConfig = {
                 Type = "oneshot";
                 RemainAfterExit = true;
