@@ -27,6 +27,9 @@
           
           fromImage = self.packages.${system}.php-apache-base;
           
+          # Force l'architecture pour éviter les conflits
+          architecture = "amd64";
+          
           contents = with pkgs; [
             bash
             coreutils
@@ -42,17 +45,12 @@
           ];
 
           config = {
+            Entrypoint = [ "docker-php-entrypoint" ];
             Cmd = [ "apache2-foreground" ];
             WorkingDir = "/var/www/html";
             ExposedPorts = {
               "80/tcp" = {};
             };
-            Env = [
-              "APACHE_DOCUMENT_ROOT=/var/www/html"
-              "APACHE_LOG_DIR=/var/log/apache2"
-              "APACHE_RUN_USER=www-data"
-              "APACHE_RUN_GROUP=www-data"
-            ];
           };
 
           extraCommands = ''
