@@ -37,8 +37,84 @@
               ${nixpkgs.legacyPackages.${system}.docker}/bin/docker images
             '';
           };
+        }
+
+        # Générer automatiquement les réseaux et services pour les 8 groupes
+        (let
+          # Fonction pour créer un réseau Docker isolé pour un groupe
+          mkDockerNetwork = groupNum: {
+            "docker-network-g${toString groupNum}" = {
+              description = "Docker Network for Group ${toString groupNum}";
+              wantedBy = [ "multi-user.target" ];
+              after = [ "docker.service" ];
+              requires = [ "docker.service" ];
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+              };
+              script = ''
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker network rm labnet_g${toString groupNum} 2>/dev/null || true
+                
+                echo "Creating isolated network for group ${toString groupNum}..."
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker network create \
+                  --driver bridge \
+                  --subnet 172.20.${toString groupNum}.0/24 \
+                  labnet_g${toString groupNum}
+                
+                echo "Network labnet_g${toString groupNum} created (172.20.${toString groupNum}.0/24)"
+              '';
+              preStop = ''
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker network rm labnet_g${toString groupNum} || true
+              '';
+            };
+          };
           
-          virtualisation.memorySize = 16384; 
+          # Fonction pour créer un service web-vuln pour un groupe
+          mkWebVulnService = groupNum: {
+            "docker-web-vuln-g${toString groupNum}" = {
+              description = "Web-Vuln Container - Group ${toString groupNum}";
+              wantedBy = [ "multi-user.target" ];
+              after = [ "docker-network-g${toString groupNum}.service" ];
+              requires = [ "docker-network-g${toString groupNum}.service" ];
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+                ExecStartPre = "${nixpkgs.legacyPackages.${system}.docker}/bin/docker rm -f web-vuln-g${toString groupNum} || true";
+              };
+              script = ''
+                echo "Starting web-vuln container for group ${toString groupNum}..."
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker run -d \
+                  --name web-vuln-g${toString groupNum} \
+                  --network labnet_g${toString groupNum} \
+                  --ip 172.20.${toString groupNum}.2 \
+                  -p ${toString (8080 + groupNum)}:80 \
+                  --restart unless-stopped \
+                  web-vuln:latest
+                
+                echo "Group ${toString groupNum}: web-vuln started (172.20.${toString groupNum}.2:80 -> :${toString (8080 + groupNum)})"
+              '';
+              preStop = ''
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker stop web-vuln-g${toString groupNum} || true
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker rm web-vuln-g${toString groupNum} || true
+              '';
+            };
+          };
+          
+          # Générer tous les services (réseaux + containers) pour les groupes 1 à 8
+          allServices = builtins.foldl' 
+            (acc: groupNum: 
+              acc 
+              // (mkDockerNetwork groupNum)
+              // (mkWebVulnService groupNum)
+            )
+            {}
+            [1 2 3 4 5 6 7 8];
+        in
+        {
+          systemd.services = allServices;
+        })
+
+        { 
           virtualisation.cores = 10;     
           virtualisation.diskSize = 51200;
           
