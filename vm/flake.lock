@@ -18,8 +18,25 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "web-vuln": "web-vuln"
       }
+    },
+    "web-vuln": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "../lab/images/web-vuln",
+        "type": "path"
+      },
+      "original": {
+        "path": "../lab/images/web-vuln",
+        "type": "path"
+      },
+      "parent": []
     }
   },
   "root": "root",

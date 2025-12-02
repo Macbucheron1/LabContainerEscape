@@ -37,7 +37,6 @@
     python3
   ];
 
-  # Configuration du clavier français pour la console TTY
   console.keyMap = "fr";
 
   services.openssh.enable = true;

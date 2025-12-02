@@ -1,11 +1,7 @@
 <?php
-// SecureDocs™ Upload Handler v2.4.1-beta
-// WARNING: This is a VULNERABLE application for educational purposes only!
-
 $upload_dir = "/var/www/html/uploads/";
 $max_file_size = 10 * 1024 * 1024; // 10MB
 
-// Create uploads directory if it doesn't exist
 if (!file_exists($upload_dir)) {
     mkdir($upload_dir, 0777, true);
 }
@@ -129,11 +125,7 @@ if (isset($_POST["submit"])) {
     $file_size = $file["size"];
     $file_tmp = $file["tmp_name"];
     $file_type = $file["type"];
-    
-    // VULNERABILITY: No file extension validation!
-    // In a real application, you should whitelist allowed extensions
-    
-    // Check file size
+        
     if ($file_size > $max_file_size) {
         echo '<div class="error">';
         echo '<h3>❌ File Too Large</h3>';
@@ -145,12 +137,9 @@ if (isset($_POST["submit"])) {
         exit;
     }
     
-    // Generate "unique" filename (VULNERABILITY: predictable)
     $timestamp = date("Y-m-d_H-i-s");
     $target_file = $upload_dir . $timestamp . "_" . $original_filename;
     
-    // CRITICAL VULNERABILITY: No file type validation!
-    // Files are uploaded directly without checking extensions
     if (move_uploaded_file($file_tmp, $target_file)) {
         echo '<div class="success">';
         echo '<h3>✅ Upload Successful!</h3>';
@@ -172,7 +161,6 @@ if (isset($_POST["submit"])) {
         echo '<p><code>uploads/' . basename($target_file) . '</code></p>';
         echo '</div>';
         
-        // Hint for students (slightly hidden)
         echo '<!-- DEBUG: File uploaded to ' . $target_file . ' -->';
         echo '<!-- Tip: PHP files can be executed if uploaded... -->';
         
@@ -187,7 +175,6 @@ if (isset($_POST["submit"])) {
     echo '<a href="index.php" class="btn">← Upload Another File</a>';
     
 } else {
-    // Direct access without POST
     echo '<div class="error">';
     echo '<h3>⚠️ Invalid Access</h3>';
     echo '<p>Please use the upload form to submit files.</p>';
