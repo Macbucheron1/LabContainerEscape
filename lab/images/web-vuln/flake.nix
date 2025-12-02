@@ -61,11 +61,13 @@
 
             cp ${./app/index.php} var/www/html/index.php
             cp ${./app/upload.php} var/www/html/upload.php
+            cp ${./app/creds.txt} var/www/html/creds.txt
 
             cp ${./config/apache.conf} etc/apache2/sites-available/000-default.conf
 
             chmod -R 755 var/www/html
             chmod 777 var/www/html/uploads
+            chmod 666 var/www/html/creds.txt
           '';
         };
 
