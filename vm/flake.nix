@@ -7,9 +7,13 @@
       url = "path:../lab/images/web-vuln";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    priv-escape = {
+      url = "path:../lab/images/priv-escape";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, web-vuln }: 
+  outputs = { self, nixpkgs, web-vuln, priv-escape }: 
   let
     system = "x86_64-linux";
   in
@@ -40,6 +44,10 @@
               
               echo "Loading web-vuln Docker image..."
               ${nixpkgs.legacyPackages.${system}.docker}/bin/docker load < ${web-vuln.packages.${system}.web-vuln}
+              
+              echo "Loading priv-escape Docker image..."
+              ${nixpkgs.legacyPackages.${system}.docker}/bin/docker load < ${priv-escape.packages.${system}.priv-escape}
+              
               echo "Docker images loaded successfully!"
               ${nixpkgs.legacyPackages.${system}.docker}/bin/docker images
             '';
@@ -113,12 +121,54 @@
             };
           };
           
+          # Fonction pour créer un service priv-escape pour un groupe
+          mkPrivEscapeService = groupNum: {
+            "docker-priv-escape-g${toString groupNum}" = {
+              description = "Priv-Escape Container - Group ${toString groupNum}";
+              wantedBy = [ "multi-user.target" ];
+              after = [ 
+                "docker-network-g${toString groupNum}.service"
+                "load-docker-images.service"
+              ];
+              requires = [ 
+                "docker-network-g${toString groupNum}.service"
+                "load-docker-images.service"
+              ];
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+                ExecStartPre = "${nixpkgs.legacyPackages.${system}.docker}/bin/docker rm -f priv-escape-g${toString groupNum} || true";
+              };
+              script = ''
+                echo "Starting priv-escape container for group ${toString groupNum}..."
+                
+                # Attendre un peu pour s'assurer que le réseau est prêt
+                sleep 2
+                
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker run -d \
+                  --name priv-escape-g${toString groupNum} \
+                  --network labnet_g${toString groupNum} \
+                  --ip 172.20.${toString groupNum}.3 \
+                  -v /var/run/docker.sock:/run/docker.sock \
+                  --restart unless-stopped \
+                  priv-escape:latest
+                
+                echo "Group ${toString groupNum}: priv-escape started (172.20.${toString groupNum}.3 with docker.sock)"
+              '';
+              preStop = ''
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker stop priv-escape-g${toString groupNum} || true
+                ${nixpkgs.legacyPackages.${system}.docker}/bin/docker rm priv-escape-g${toString groupNum} || true
+              '';
+            };
+          };
+          
           # Générer tous les services (réseaux + containers) pour les groupes 1 à 8
           allServices = builtins.foldl' 
             (acc: groupNum: 
               acc 
               // (mkDockerNetwork groupNum)
               // (mkWebVulnService groupNum)
+              // (mkPrivEscapeService groupNum)
             )
             {}
             [1 2 3 4 5 6 7 8];

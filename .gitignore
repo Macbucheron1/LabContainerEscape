@@ -3,3 +3,4 @@ vm/result
 lab/images/web-vuln/result
 vm/*.qcow2
 *.qcow2
+lab/images/priv-escape/result

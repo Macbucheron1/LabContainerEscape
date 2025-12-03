@@ -42,6 +42,9 @@
             gnugrep
             gnused
             wget
+            openssh
+            sshpass
+            python3
           ];
 
           config = {

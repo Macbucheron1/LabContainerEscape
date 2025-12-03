@@ -16,9 +16,26 @@
         "type": "github"
       }
     },
+    "priv-escape": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "../lab/images/priv-escape",
+        "type": "path"
+      },
+      "original": {
+        "path": "../lab/images/priv-escape",
+        "type": "path"
+      },
+      "parent": []
+    },
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
+        "priv-escape": "priv-escape",
         "web-vuln": "web-vuln"
       }
     },
